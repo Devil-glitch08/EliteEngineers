@@ -1,0 +1,7 @@
+{
+  "name": "Smart Shetkari - Farmer Assistant",
+  "description": "An AI-powered assistant for farmers to get crop suggestions, weather forecasts, pesticide info, and market prices in Marathi and Hindi.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
