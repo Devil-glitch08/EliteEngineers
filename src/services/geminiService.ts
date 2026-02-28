@@ -33,7 +33,11 @@ export async function getCropSuggestions(
     body: JSON.stringify({ language, location, soilColor, season }),
   });
 
-  if (!response.ok) throw new Error("Failed to fetch crop suggestions");
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("API Error Response:", errorText);
+    throw new Error(`Failed to fetch crop suggestions: ${response.status} ${response.statusText}`);
+  }
   
   const result = await response.json() as CropSuggestionResponse;
   try {
@@ -69,7 +73,11 @@ export async function getCropDetails(
     body: JSON.stringify({ language, location, latLng, query }),
   });
 
-  if (!response.ok) throw new Error("Failed to fetch crop details");
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("API Error Response:", errorText);
+    throw new Error(`Failed to fetch crop details: ${response.status} ${response.statusText}`);
+  }
 
   const result = await response.json() as CropDetailsResponse;
   try {
@@ -104,7 +112,11 @@ export async function getCropPriceTrends(
     body: JSON.stringify({ language, location, cropName }),
   });
 
-  if (!response.ok) throw new Error("Failed to fetch price trends");
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("API Error Response:", errorText);
+    throw new Error(`Failed to fetch price trends: ${response.status} ${response.statusText}`);
+  }
   
   const result = await response.json() as PriceTrendData[];
   try {

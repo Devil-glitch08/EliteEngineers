@@ -10,6 +10,11 @@
   force = true
 
 [[redirects]]
+  from = "/.netlify/functions/server"
+  to = "/.netlify/functions/server/"
+  status = 301
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200

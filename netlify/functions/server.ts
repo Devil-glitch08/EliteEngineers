@@ -10,6 +10,13 @@ const router = Router();
 
 app.use(express.json());
 
+// Logging middleware
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.url}`);
+  console.log("Headers:", JSON.stringify(req.headers));
+  next();
+});
+
 // Mount router at multiple possible paths to handle different redirect scenarios
 app.use("/.netlify/functions/server", router);
 app.use("/api", router);
@@ -27,10 +34,18 @@ function getAI() {
 
 // API routes
 router.get("/health", (req, res) => {
-  res.json({ status: "ok", hasKey: !!process.env.GEMINI_API_KEY });
+  console.log("Health check requested");
+  res.json({ 
+    status: "ok", 
+    hasKey: !!process.env.GEMINI_API_KEY,
+    env: process.env.NODE_ENV,
+    path: req.path,
+    url: req.url
+  });
 });
 
 router.post("/crop-suggestions", async (req, res) => {
+  console.log("Crop suggestions requested", req.body);
   const { language, location, soilColor, season } = req.body;
   const langName = language === "mr" ? "Marathi" : language === "hi" ? "Hindi" : "English";
   
@@ -92,6 +107,7 @@ All text MUST be in ${langName}.`;
 });
 
 router.post("/crop-details", async (req, res) => {
+  console.log("Crop details requested", req.body);
   const { language, location, latLng, query } = req.body;
   const langName = language === "mr" ? "Marathi" : language === "hi" ? "Hindi" : "English";
   
@@ -148,6 +164,7 @@ All text MUST be in ${langName}.`;
 });
 
 router.post("/price-trends", async (req, res) => {
+  console.log("Price trends requested", req.body);
   const { language, location, cropName } = req.body;
   const langName = language === "mr" ? "Marathi" : language === "hi" ? "Hindi" : "English";
   
