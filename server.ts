@@ -10,14 +10,31 @@ const PORT = 3000;
 
 app.use(express.json());
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  if (!aiInstance) {
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      throw new Error("GEMINI_API_KEY is not set in environment variables");
+    }
+    aiInstance = new GoogleGenAI({ apiKey });
+  }
+  return aiInstance;
+}
 
 // API routes
+app.get("/api/health", (req, res) => {
+  res.json({ status: "ok", hasKey: !!process.env.GEMINI_API_KEY });
+});
+
 app.post("/api/crop-suggestions", async (req, res) => {
   const { language, location, soilColor, season } = req.body;
   const langName = language === "mr" ? "Marathi" : language === "hi" ? "Hindi" : "English";
   
-  const prompt = `You are an expert agricultural assistant.
+  try {
+    const ai = getAI();
+    const prompt = `You are an expert agricultural assistant.
 Language: ${langName}
 Location: ${location}
 Soil Color: ${soilColor}
@@ -29,7 +46,6 @@ For each suggested crop, include the expected yield (e.g., "15-20 quintals per a
 Return a JSON object with 'weatherForecast' (string), 'weatherDetails' (object with 'temperature', 'humidity', 'rainChance'), and 'suggestedCrops' (array of objects with 'name', 'reason', 'expectedYield', and 'profitability').
 All text MUST be in ${langName}.`;
 
-  try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -106,6 +122,7 @@ All text MUST be in ${langName}.`;
   }
 
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -142,6 +159,7 @@ Return a JSON array of objects, where each object has 'month' (string, e.g., "Ja
 Ensure the prices reflect realistic market fluctuations.`;
 
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -169,6 +187,7 @@ Ensure the prices reflect realistic market fluctuations.`;
 
 app.post("/api/generate-logo", async (req, res) => {
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
@@ -202,6 +221,7 @@ app.post("/api/generate-logo", async (req, res) => {
 app.post("/api/generate-crop-image", async (req, res) => {
   const { query, aspectRatio } = req.body;
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {

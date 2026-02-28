@@ -10,14 +10,33 @@ const router = Router();
 
 app.use(express.json());
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Mount router at multiple possible paths to handle different redirect scenarios
+app.use("/.netlify/functions/server", router);
+app.use("/api", router);
+app.use("/", router);
+
+let aiInstance: GoogleGenAI | null = null;
+
+function getAI() {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is not set in environment variables");
+  }
+  return new GoogleGenAI({ apiKey });
+}
 
 // API routes
+router.get("/health", (req, res) => {
+  res.json({ status: "ok", hasKey: !!process.env.GEMINI_API_KEY });
+});
+
 router.post("/crop-suggestions", async (req, res) => {
   const { language, location, soilColor, season } = req.body;
   const langName = language === "mr" ? "Marathi" : language === "hi" ? "Hindi" : "English";
   
-  const prompt = `You are an expert agricultural assistant.
+  try {
+    const ai = getAI();
+    const prompt = `You are an expert agricultural assistant.
 Language: ${langName}
 Location: ${location}
 Soil Color: ${soilColor}
@@ -29,7 +48,6 @@ For each suggested crop, include the expected yield (e.g., "15-20 quintals per a
 Return a JSON object with 'weatherForecast' (string), 'weatherDetails' (object with 'temperature', 'humidity', 'rainChance'), and 'suggestedCrops' (array of objects with 'name', 'reason', 'expectedYield', and 'profitability').
 All text MUST be in ${langName}.`;
 
-  try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -77,7 +95,9 @@ router.post("/crop-details", async (req, res) => {
   const { language, location, latLng, query } = req.body;
   const langName = language === "mr" ? "Marathi" : language === "hi" ? "Hindi" : "English";
   
-  const prompt = `You are an expert agricultural assistant.
+  try {
+    const ai = getAI();
+    const prompt = `You are an expert agricultural assistant.
 Language: ${langName}
 Location: ${location}
 User Query / Selected Item: ${query}
@@ -90,22 +110,21 @@ Please provide detailed information based on the user's query in Markdown format
 
 All text MUST be in ${langName}.`;
 
-  const config: any = {
-    tools: [{ googleMaps: {} }],
-  };
-
-  if (latLng) {
-    config.toolConfig = {
-      retrievalConfig: {
-        latLng: {
-          latitude: latLng.lat,
-          longitude: latLng.lng,
-        },
-      },
+    const config: any = {
+      tools: [{ googleMaps: {} }],
     };
-  }
 
-  try {
+    if (latLng) {
+      config.toolConfig = {
+        retrievalConfig: {
+          latLng: {
+            latitude: latLng.lat,
+            longitude: latLng.lng,
+          },
+        },
+      };
+    }
+
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
       contents: prompt,
@@ -132,7 +151,9 @@ router.post("/price-trends", async (req, res) => {
   const { language, location, cropName } = req.body;
   const langName = language === "mr" ? "Marathi" : language === "hi" ? "Hindi" : "English";
   
-  const prompt = `You are an expert agricultural economist.
+  try {
+    const ai = getAI();
+    const prompt = `You are an expert agricultural economist.
 Language: ${langName}
 Location: ${location}
 Crop/Product: ${cropName}
@@ -141,7 +162,6 @@ Provide the estimated average market price trends for this crop/product over the
 Return a JSON array of objects, where each object has 'month' (string, e.g., "Jan", "Feb", translated to ${langName}) and 'price' (number, estimated price in local currency per standard unit, e.g., per quintal or kg).
 Ensure the prices reflect realistic market fluctuations.`;
 
-  try {
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -169,6 +189,7 @@ Ensure the prices reflect realistic market fluctuations.`;
 
 router.post("/generate-logo", async (req, res) => {
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
@@ -202,6 +223,7 @@ router.post("/generate-logo", async (req, res) => {
 router.post("/generate-crop-image", async (req, res) => {
   const { query, aspectRatio } = req.body;
   try {
+    const ai = getAI();
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: {
@@ -232,6 +254,5 @@ router.post("/generate-crop-image", async (req, res) => {
   }
 });
 
-app.use("/.netlify/functions/server", router);
 
 export const handler = serverless(app);
